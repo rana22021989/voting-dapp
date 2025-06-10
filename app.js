@@ -284,40 +284,49 @@ const contractABI = [ {
  ];
 
 async function connectWallet() {
+  console.log("🔍 Checking for MetaMask...");
   if (typeof window.ethereum === 'undefined') {
-    alert('MetaMask is not installed. Please install it to use this app.');
+    alert('🚫 MetaMask is not installed. Please install it to use this app.');
     return;
   }
 
   try {
-    const web3 = new Web3(window.ethereum);
-
-    // Ensure Sepolia network (0xaa36a7)
-    let chainId = await ethereum.request({ method: 'eth_chainId' });
-    if (chainId !== '11155111') {
-      try {
-        await ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '11155111' }]
-        });
-      } catch (switchError) {
-        alert("Please switch to Sepolia Test Network in MetaMask.");
-        return;
-      }
+    console.log("🔑 Requesting wallet access...");
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts || accounts.length === 0) {
+      alert('❌ No account found. Please log into MetaMask.');
+      return;
     }
 
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
     currentAccount = accounts[0];
+    console.log("✅ Wallet connected:", currentAccount);
     document.getElementById("walletAddress").innerText = `Connected: ${currentAccount}`;
 
+    // Ensure we're on Sepolia
+    const chainId = await ethereum.request({ method: 'eth_chainId' });
+    console.log("🌐 Current chainId:", chainId);
+ // chainId: '0xaa36a7'
+    if (chainId !== '11155111') {
+      console.log("🔄 Switching to Sepolia...");
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '11155111' }]
+      });
+    }
+
+    const web3 = new Web3(window.ethereum);
     contractInstance = new web3.eth.Contract(contractABI, contractAddress);
 
+    console.log("📡 Contract instance loaded:", contractInstance);
     await loadCandidates();
-    updateAdminFeatures();
 
   } catch (error) {
-    console.error("Wallet connection failed:", error);
-    alert("Wallet connection failed. Please allow access in MetaMask.");
+    console.error("❗ Wallet connection failed:", error);
+    if (error.code === 4001) {
+      alert('❌ Connection request rejected. Please allow access in MetaMask.');
+    } else {
+      alert('⚠️ Wallet connection failed. See console for details.');
+    }
   }
 }
 

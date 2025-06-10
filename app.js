@@ -92,19 +92,17 @@ async function connectWallet() {
   if (window.ethereum) {
     try {
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      signer = provider.getSigner();
-      contract = new ethers.Contract(contractAddress, abi, signer);
-      document.getElementById("walletAddress").innerText = `Connected: ${accounts[0]}`;
-      populateCandidates();
-    } catch (err) {
-      alert("Wallet connection failed.");
+      currentAccount = accounts[0];
+      document.getElementById("walletAddress").innerText = `Connected: ${currentAccount}`;
+      await loadCandidates(); // Load candidate list after connection
+    } catch (error) {
+      console.error("User denied wallet connection:", error);
+      alert("Wallet connection failed. Please allow access in MetaMask.");
     }
   } else {
-    alert("Please install MetaMask.");
+    alert("MetaMask not detected! Please install MetaMask.");
   }
 }
-
 async function registerAsVoter() {
   await contract.registerAsVoter();
   alert("Registered successfully!");

@@ -305,7 +305,7 @@ async function connectWallet() {
     // Ensure we're on Sepolia
     const chainId = await ethereum.request({ method: 'eth_chainId' });
     console.log("🌐 Current chainId:", chainId);
- // chainId: '0xaa36a7'
+ // chainId: '0xaa36a7' / '11155111'
     if (chainId !== '0xaa36a7') {
       console.log("🔄 Switching to Sepolia...");
       await ethereum.request({

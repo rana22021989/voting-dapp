@@ -1,7 +1,11 @@
-const contractAddress =  "0x0Bc037F6f9AA2CB47Fd94Bc1DCDD563Aab3a11AF";
+let currentAccount = null;
+let contractInstance = null;
 
-const abi = [
-	{
+// Replace with your contract address
+const contractAddress = "0x0Bc037F6f9AA2CB47Fd94Bc1DCDD563Aab3a11AF"; 
+
+// Replace with your contract ABI
+const contractABI = [ {
 		"inputs": [
 			{
 				"internalType": "string",
@@ -277,14 +281,7 @@ const abi = [
 		"stateMutability": "view",
 		"type": "function"
 	}
-] ;
-
-
-let contract;
-let signer;
-
-let currentAccount = null;
-let contractInstance;
+ ];
 
 async function connectWallet() {
   if (typeof window.ethereum === 'undefined') {
@@ -293,85 +290,146 @@ async function connectWallet() {
   }
 
   try {
-    // Request account access
+    const web3 = new Web3(window.ethereum);
+
+    // Ensure Sepolia network (0xaa36a7)
+    let chainId = await ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== '0xaa36a7') {
+      try {
+        await ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }]
+        });
+      } catch (switchError) {
+        alert("Please switch to Sepolia Test Network in MetaMask.");
+        return;
+      }
+    }
+
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
     currentAccount = accounts[0];
     document.getElementById("walletAddress").innerText = `Connected: ${currentAccount}`;
 
-    // Connect to Sepolia (chainId: 11155111 or 0xaa36a7)
-    const chainId = await ethereum.request({ method: 'eth_chainId' });
-    if (chainId !== '0xaa36a7') {
-      await ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0xaa36a7' }] // Sepolia
-      });
-    }
-
-    // Load contract
-    const web3 = new Web3(window.ethereum);
     contractInstance = new web3.eth.Contract(contractABI, contractAddress);
 
     await loadCandidates();
+    updateAdminFeatures();
+
   } catch (error) {
-    console.error(error);
-    alert('Wallet connection failed. Please allow access in MetaMask.');
+    console.error("Wallet connection failed:", error);
+    alert("Wallet connection failed. Please allow access in MetaMask.");
   }
 }
+
+function updateAdminFeatures() {
+  contractInstance.methods.admin().call().then((adminAddress) => {
+    const isAdmin = (currentAccount.toLowerCase() === adminAddress.toLowerCase());
+    document.getElementById("adminPanel").style.display = isAdmin ? "block" : "none";
+  });
+}
+
 async function registerAsVoter() {
-  await contract.registerAsVoter();
-  alert("Registered successfully!");
+  try {
+    await contractInstance.methods.registerAsVoter().send({ from: currentAccount });
+    alert("You have been registered as a voter.");
+  } catch (err) {
+    alert("Error registering as voter: " + err.message);
+  }
 }
 
 async function addCandidate() {
   const name = document.getElementById("candidateName").value;
   const age = parseInt(document.getElementById("candidateAge").value);
   const party = document.getElementById("candidateParty").value;
-  await contract.addCandidate(name, age, party);
-  alert("Candidate added!");
-  populateCandidates();
+
+  if (!name || !party || isNaN(age)) {
+    alert("Please fill all candidate fields.");
+    return;
+  }
+
+  try {
+    await contractInstance.methods.addCandidate(name, age, party).send({ from: currentAccount });
+    alert("Candidate added successfully.");
+    await loadCandidates();
+  } catch (err) {
+    alert("Error adding candidate: " + err.message);
+  }
+}
+
+async function loadCandidates() {
+  try {
+    const candidates = await contractInstance.methods.getCandidates().call();
+    const dropdown = document.getElementById("candidateDropdown");
+    dropdown.innerHTML = "";
+
+    candidates.forEach(c => {
+      const option = document.createElement("option");
+      option.value = c.name;
+      option.text = `${c.name} (${c.party})`;
+      dropdown.appendChild(option);
+    });
+  } catch (err) {
+    console.error("Error loading candidates:", err);
+  }
+}
+
+async function vote() {
+  const selected = document.getElementById("candidateDropdown").value;
+  if (!selected) {
+    alert("Please select a candidate.");
+    return;
+  }
+
+  try {
+    await contractInstance.methods.vote(selected).send({ from: currentAccount });
+    alert("Vote cast successfully!");
+  } catch (err) {
+    alert("Voting failed: " + err.message);
+  }
 }
 
 async function startVoting() {
-  await contract.startVoting();
-  alert("Voting started!");
+  try {
+    await contractInstance.methods.startVoting().send({ from: currentAccount });
+    alert("Voting started.");
+  } catch (err) {
+    alert("Failed to start voting: " + err.message);
+  }
 }
 
 async function endVoting() {
-  await contract.endVoting();
-  alert("Voting ended!");
-}
-
-async function voteCandidate() {
-  const dropdown = document.getElementById("candidateDropdown");
-  const name = dropdown.value.split(" - ")[0];
-  await contract.vote(name);
-  alert("Vote casted!");
+  try {
+    await contractInstance.methods.endVoting().send({ from: currentAccount });
+    alert("Voting ended.");
+  } catch (err) {
+    alert("Failed to end voting: " + err.message);
+  }
 }
 
 async function viewResults() {
-  const resultDiv = document.getElementById("results");
-  const [names, parties, votes] = await contract.viewResults();
-  let html = "<table><tr><th>Name</th><th>Party</th><th>Votes</th></tr>";
-  for (let i = 0; i < names.length; i++) {
-    html += `<tr><td>${names[i]}</td><td>${parties[i]}</td><td>${votes[i]}</td></tr>`;
+  try {
+    const resultDiv = document.getElementById("resultsDiv");
+    resultDiv.innerHTML = "";
+
+    const [names, parties, votes] = await contractInstance.methods.viewResults().call();
+    for (let i = 0; i < names.length; i++) {
+      const line = `${names[i]} (${parties[i]}) - ${votes[i]} votes`;
+      const p = document.createElement("p");
+      p.innerText = line;
+      resultDiv.appendChild(p);
+    }
+
+    const winner = await contractInstance.methods.getWinner().call();
+    document.getElementById("winnerDiv").innerText =
+      `🏆 Winner: ${winner.name} (${winner.party}) with ${winner.votes} votes`;
+
+  } catch (err) {
+    alert("Could not fetch results: " + err.message);
   }
-  html += "</table>";
-  resultDiv.innerHTML = html;
 }
 
-async function viewWinner() {
-  const winner = await contract.getWinner();
-  document.getElementById("winner").innerText = `Winner: ${winner.name} (${winner.party}) with ${winner.votes} votes`;
-}
-
-async function populateCandidates() {
-  const candidates = await contract.getCandidates();
-  const dropdown = document.getElementById("candidateDropdown");
-  dropdown.innerHTML = "";
-  candidates.forEach(c => {
-    const option = document.createElement("option");
-    option.value = `${c.name} - ${c.party}`;
-    option.innerText = `${c.name} - ${c.party}`;
-    dropdown.appendChild(option);
-  });
+// Listen for MetaMask changes
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => window.location.reload());
+  window.ethereum.on('chainChanged', () => window.location.reload());
 }

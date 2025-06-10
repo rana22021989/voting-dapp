@@ -306,11 +306,11 @@ async function connectWallet() {
     const chainId = await ethereum.request({ method: 'eth_chainId' });
     console.log("🌐 Current chainId:", chainId);
  // chainId: '0xaa36a7'
-    if (chainId !== '11155111') {
+    if (chainId !== '0xaa36a7') {
       console.log("🔄 Switching to Sepolia...");
       await ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '11155111' }]
+        params: [{ chainId: '0xaa36a7' }]
       });
     }
 

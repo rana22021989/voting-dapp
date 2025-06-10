@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Blockchain Voting DApp</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Blockchain Voting DApp</h1>
+    <img src="vote.png" class="banner" alt="Voting Banner">
+
+    <button onclick="connectWallet()">Connect MetaMask</button>
+
+    <section>
+      <h2>Register as Voter</h2>
+      <button onclick="registerVoter()">Register</button>
+    </section>
+
+    <section>
+      <h2>Admin Actions</h2>
+      <input id="candName" placeholder="Name" />
+      <input id="candAge" placeholder="Age" type="number" />
+      <input id="candParty" placeholder="Party" />
+      <button onclick="addCandidate()">Add Candidate</button>
+      <button onclick="startVoting()">Start Voting</button>
+      <button onclick="endVoting()">End Voting</button>
+    </section>
+
+    <section>
+      <h2>Vote</h2>
+      <input id="voteName" placeholder="Candidate Name" />
+      <button onclick="vote()">Vote</button>
+    </section>
+
+    <section>
+      <h2>Candidate List</h2>
+      <button onclick="listCandidates()">Show Candidates</button>
+      <ul id="candidateList"></ul>
+    </section>
+
+    <section>
+      <h2>Results</h2>
+      <button onclick="viewResults()">View Results</button>
+      <div id="results"></div>
+    </section>
+
+    <section>
+      <h2>Winner</h2>
+      <button onclick="getWinner()">Declare Winner</button>
+      <div id="winner"></div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.1/dist/ethers.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

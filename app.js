@@ -283,19 +283,38 @@ const abi = [
 let contract;
 let signer;
 
+let currentAccount = null;
+let contractInstance;
+
 async function connectWallet() {
-  if (window.ethereum) {
-    try {
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      currentAccount = accounts[0];
-      document.getElementById("walletAddress").innerText = `Connected: ${currentAccount}`;
-      await loadCandidates(); // Load candidate list after connection
-    } catch (error) {
-      console.error("User denied wallet connection:", error);
-      alert("Wallet connection failed. Please allow access in MetaMask.");
+  if (typeof window.ethereum === 'undefined') {
+    alert('MetaMask is not installed. Please install it to use this app.');
+    return;
+  }
+
+  try {
+    // Request account access
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    currentAccount = accounts[0];
+    document.getElementById("walletAddress").innerText = `Connected: ${currentAccount}`;
+
+    // Connect to Sepolia (chainId: 11155111 or 0xaa36a7)
+    const chainId = await ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== '0xaa36a7') {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0xaa36a7' }] // Sepolia
+      });
     }
-  } else {
-    alert("MetaMask not detected! Please install MetaMask.");
+
+    // Load contract
+    const web3 = new Web3(window.ethereum);
+    contractInstance = new web3.eth.Contract(contractABI, contractAddress);
+
+    await loadCandidates();
+  } catch (error) {
+    console.error(error);
+    alert('Wallet connection failed. Please allow access in MetaMask.');
   }
 }
 async function registerAsVoter() {

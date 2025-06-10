@@ -294,11 +294,11 @@ async function connectWallet() {
 
     // Ensure Sepolia network (0xaa36a7)
     let chainId = await ethereum.request({ method: 'eth_chainId' });
-    if (chainId !== '0xaa36a7') {
+    if (chainId !== '11155111') {
       try {
         await ethereum.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0xaa36a7' }]
+          params: [{ chainId: '11155111' }]
         });
       } catch (switchError) {
         alert("Please switch to Sepolia Test Network in MetaMask.");
